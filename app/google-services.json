@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "277825786289",
+    "project_id": "rebite-23000",
+    "storage_bucket": "rebite-23000.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:277825786289:android:c46b383195aaf6a862ad90",
+        "android_client_info": {
+          "package_name": "com.example.a213743_nureenadreana_drrimaniza_lab1"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyApJySoCFi-qXFxySXJpwpz5GIkKRB_BHw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
