@@ -88,44 +88,19 @@ class AppViewModel(application: Application) :
         _userProfile.value = UserProfile()
     }
 
-    // --- Data Flows ---
-    val foodItems: StateFlow<List<FoodItemData>> = repository.allItems.map { list ->
-        list.map {
-            FoodItemData(
-                it.id,
-                it.title,
-                it.distance,
-                it.imageUri,
-                it.userName,
-                it.isFree,
-                it.description,
-                it.price
-            )
-        }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    // --- Data Flows (Now from Firestore) ---
+    val foodItems: StateFlow<List<FoodItemData>> = FirebaseRepository.getListingsFlow()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    val myItems: StateFlow<List<FoodItemData>> = userProfile.flatMapLatest { profile ->
-        repository.getItemsByUser(profile.name).map { list ->
-            list.map {
-                FoodItemData(
-                    it.id,
-                    it.title,
-                    it.distance,
-                    it.imageUri,
-                    it.userName,
-                    it.isFree,
-                    it.description,
-                    it.price
-                )
-            }
-        }
+    val myItems: StateFlow<List<FoodItemData>> = combine(foodItems, userProfile) { items, profile ->
+        items.filter { it.userName == profile.name }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val bookings: StateFlow<List<BookingEntity>> = userProfile.flatMapLatest { profile ->
         bookingRepository.getBookingsByUser(profile.name)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    val bookmarkedItemIds: StateFlow<Set<Int>> = userProfile.flatMapLatest { profile ->
+    val bookmarkedItemIds: StateFlow<Set<String>> = userProfile.flatMapLatest { profile ->
         bookmarkRepository.getBookmarksByUser(profile.name).map { it.map { bookmark -> bookmark.foodId }.toSet() }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptySet())
 
@@ -134,7 +109,7 @@ class AppViewModel(application: Application) :
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     // --- Bookmark Methods ---
-    fun toggleBookmark(foodId: Int) {
+    fun toggleBookmark(foodId: String) {
         viewModelScope.launch {
             val userName = _userProfile.value.name
             val isCurrentlyBookmarked = bookmarkedItemIds.value.contains(foodId)
@@ -187,23 +162,23 @@ class AppViewModel(application: Application) :
     }
 
     fun addItem() {
-        viewModelScope.launch {
-            val item = FoodEntity(
-                title = _newItemName.value,
-                distance = _newItemLocation.value,
-                imageUri = _newItemImageUri.value,
-                userName = _userProfile.value.name,
-                isFree = _newItemIsFree.value,
-                description = _newItemDescription.value,
-                price = if (_newItemIsFree.value) "" else _newItemPrice.value
-            )
-            repository.insert(item)
-            clearForm()
-        }
+        FirebaseRepository.saveFoodListing(
+            title = _newItemName.value,
+            location = _newItemLocation.value,
+            userName = _userProfile.value.name,
+            isFree = _newItemIsFree.value,
+            description = _newItemDescription.value,
+            price = if (_newItemIsFree.value) "" else _newItemPrice.value,
+            imageUri = _newItemImageUri.value,
+            onComplete = { success ->
+                if (success) clearForm()
+            }
+        )
     }
 
+    // Legacy or helper - now unified in addItem()
     fun addItemToFirebase() {
-        FirebaseRepository.saveFoodListing(title = _newItemName.value, location = _newItemLocation.value, userName = _userProfile.value.name, isFree = _newItemIsFree.value, description = _newItemDescription.value, price = _newItemPrice.value, imageUri = _newItemImageUri.value, onComplete = {})
+        addItem()
     }
 
     fun confirmBooking(itemName: String, location: String, price: String, isFree: Boolean) {
@@ -220,22 +195,12 @@ class AppViewModel(application: Application) :
     }
 
     fun deleteItem(itemData: FoodItemData) {
-        viewModelScope.launch {
-            val entity = FoodEntity(
-                id = itemData.id,
-                title = itemData.title,
-                distance = itemData.distance,
-                imageUri = itemData.imageUri,
-                userName = itemData.userName,
-                isFree = itemData.isFree,
-                description = itemData.description,
-                price = itemData.price
-            )
-            repository.delete(entity)
+        FirebaseRepository.deleteListing(itemData.id) { success ->
+            // Optionally handle success/failure notification
         }
     }
 
-    private var editingItemId: Int? = null
+    private var editingItemId: String? = null
     fun prepareEdit(item: FoodItemData) {
         editingItemId = item.id; _isEditing.value = true; _newItemName.value = item.title; _newItemLocation.value = item.distance; _newItemDescription.value = item.description; _newItemIsFree.value = item.isFree; _newItemPrice.value = item.price; _newItemImageUri.value = item.imageUri
     }
@@ -245,19 +210,22 @@ class AppViewModel(application: Application) :
     }
 
     fun saveItem() {
-        viewModelScope.launch {
-            val entity = FoodEntity(
-                id = editingItemId ?: 0,
+        val currentId = editingItemId
+        if (currentId == null) {
+            addItem()
+        } else {
+            FirebaseRepository.updateFoodListing(
+                id = currentId,
                 title = _newItemName.value,
-                distance = _newItemLocation.value,
-                imageUri = _newItemImageUri.value,
-                userName = _userProfile.value.name,
+                location = _newItemLocation.value,
                 isFree = _newItemIsFree.value,
                 description = _newItemDescription.value,
-                price = if (_newItemIsFree.value) "" else _newItemPrice.value
+                price = if (_newItemIsFree.value) "" else _newItemPrice.value,
+                imageUri = _newItemImageUri.value,
+                onComplete = { success ->
+                    if (success) clearForm()
+                }
             )
-            if (editingItemId == null) repository.insert(entity) else repository.update(entity)
-            clearForm()
         }
     }
 

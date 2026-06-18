@@ -8,7 +8,7 @@ class BookmarkRepository(private val bookmarkDao: BookmarkDao) {
     fun getBookmarksByUser(userName: String): Flow<List<BookmarkEntity>> =
         bookmarkDao.getBookmarksByUser(userName)
 
-    fun isBookmarked(foodId: Int, userName: String): Flow<Boolean> =
+    fun isBookmarked(foodId: String, userName: String): Flow<Boolean> =
         bookmarkDao.isBookmarked(foodId, userName)
 
     suspend fun insert(bookmark: BookmarkEntity) {

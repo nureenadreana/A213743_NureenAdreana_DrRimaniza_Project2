@@ -4,6 +4,6 @@ import androidx.room.Entity
 
 @Entity(tableName = "bookmarks", primaryKeys = ["foodId", "userName"])
 data class BookmarkEntity(
-    val foodId: Int,
+    val foodId: String,
     val userName: String
 )

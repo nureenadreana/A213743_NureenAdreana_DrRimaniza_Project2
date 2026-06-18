@@ -258,12 +258,8 @@ fun AddItemForm(navController: NavHostController, viewModel: AppViewModel) {
             // Post Button
             Button(
                 onClick = {
-                    if (isEditing) {
-                        viewModel.saveItem()
-                    } else {
-                        viewModel.addItemToFirebase()
-                        viewModel.addItem()
-                    }
+                    viewModel.saveItem()
+
                     navController.popBackStack()
                 },
                 enabled = itemName.isNotBlank() && itemLocation.isNotBlank() && (isFree || itemPrice.isNotBlank()),

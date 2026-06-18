@@ -19,5 +19,5 @@ interface BookmarkDao {
     fun getBookmarksByUser(userName: String): Flow<List<BookmarkEntity>>
 
     @Query("SELECT EXISTS(SELECT 1 FROM bookmarks WHERE foodId = :foodId AND userName = :userName)")
-    fun isBookmarked(foodId: Int, userName: String): Flow<Boolean>
+    fun isBookmarked(foodId: String, userName: String): Flow<Boolean>
 }
