@@ -38,6 +38,9 @@ class AppViewModel(application: Application) :
     private val bookmarkRepository: BookmarkRepository
     private val authRepository = AuthRepository()
 
+    private val _userProfile = MutableStateFlow(UserProfile())
+    val userProfile = _userProfile.asStateFlow()
+
     init {
         val db = FoodDatabase.Companion.getDatabase(application)
         repository = FoodRepository(db.foodDao())
@@ -46,9 +49,6 @@ class AppViewModel(application: Application) :
         
         syncProfile()
     }
-
-    private val _userProfile = MutableStateFlow(UserProfile())
-    val userProfile = _userProfile.asStateFlow()
 
     fun syncProfile() {
         val currentUser = authRepository.currentUser()
